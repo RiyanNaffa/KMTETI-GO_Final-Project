@@ -1,8 +1,6 @@
 package api
 
 import (
-	// "encoding/json"
-	// "log"
 	"net/http"
 	// "book-store/src/service"
 )
@@ -10,11 +8,11 @@ import (
 func BookHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		// pass
+		w.Write([]byte("GET api/book"))
 	case "POST":
-		// pass
+		w.Write([]byte("POST api/book"))
 	default:
-		// pass
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 
 }
