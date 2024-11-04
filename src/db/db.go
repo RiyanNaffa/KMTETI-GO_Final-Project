@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -14,9 +15,15 @@ type DB struct {
 }
 
 func DBConnection() (*DB, error) {
-	godotenv.Load()
+	errEnv := godotenv.Load(".env")
+	if errEnv != nil {
+		log.Fatalf("Error loading .env file: %s", errEnv)
+	}
+
+	url := os.Getenv("URL")
+
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.Client().ApplyURI(os.Getenv("MONGODB")).SetServerAPIOptions(serverAPI)
+	opts := options.Client().ApplyURI(url).SetServerAPIOptions(serverAPI)
 
 	client, err := mongo.Connect(context.TODO(), opts)
 	if err != nil {
