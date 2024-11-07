@@ -12,85 +12,97 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Displays all books in the database
-func DisplayAllBooks() (*model.BookDisplayResponse, error) {
+func BookDisplayAll() ([]*model.BookDisplay, error) {
 	db, err := db.DBConnection()
 
 	if err != nil {
 		log.Default().Println(err.Error())
-		return nil, errors.New("internal server error")
-	}
-	defer db.MongoDB.Client().Disconnect(context.TODO())
-
-	col := db.MongoDB.Collection("bookdisplay")
-	cur, err := col.Find(context.TODO(), bson.D{})
-
-	if err != nil {
-		log.Default().Println(err.Error())
-		return nil, errors.New("internal server error")
-	}
-
-	var bookList []*model.BookDisplay
-
-	for cur.Next(context.TODO()) {
-		var book model.BookDisplay
-		cur.Decode(&book)
-		bookList = append(bookList, &model.BookDisplay{
-			Title:  book.Title,
-			Author: book.Title,
-			Price:  book.Price,
-		})
-	}
-
-	return &model.BookDisplayResponse{
-		DataDisplay: bookList,
-	}, nil
-}
-
-// Displays a certain book in the database
-func DetailDisplay() (*model.BookDetailResponse, error) {
-	db, errCon := db.DBConnection()
-
-	if errCon != nil {
-		log.Default().Println(errCon.Error())
-		return nil, errors.New("internal server error")
+		return nil, errors.New("internal server error: cannot connect to database")
 	}
 	defer db.MongoDB.Client().Disconnect(context.TODO())
 
 	col := db.MongoDB.Collection("book")
-	cur, err := col.Find(context.TODO(), bson.D{})
+	projection := bson.D{
+		{Key: "_id", Value: 0},
+		{Key: "title", Value: 1},
+		{Key: "author", Value: 1},
+		{Key: "price", Value: 1},
+	}
+	cur, err := col.Find(context.TODO(), bson.D{}, options.Find().SetProjection(projection))
 
 	if err != nil {
 		log.Default().Println(err.Error())
-		return nil, errors.New("internal server error")
+		return nil, errors.New("internal server error: cursor error")
 	}
+	defer cur.Close(context.TODO())
+
+	var bookList []*model.BookDisplay
+
+	for cur.Next(context.TODO()) {
+		var book model.Book
+		if err := cur.Decode(&book); err != nil {
+			log.Default().Println(err.Error())
+			return nil, errors.New("internal server error: decoding error")
+		}
+		bookList = append(bookList, &model.BookDisplay{
+			Title:  book.Title,
+			Author: book.Author,
+			Price:  book.Price,
+		})
+	}
+
+	return bookList, nil
+}
+
+// Displays a certain book in the database
+func BookDetails(idStr *string) (*model.BookDetailed, error) {
+	db, err := db.DBConnection()
+
+	if err != nil {
+		log.Default().Println(err.Error())
+		return nil, errors.New("internal server error: cannot connect to database")
+	}
+	defer db.MongoDB.Client().Disconnect(context.TODO())
+
+	col := db.MongoDB.Collection("book")
 
 	var bookDetails *model.Book
-
-	cur.Next(context.TODO())
-	var book model.Book
-	cur.Decode(&book)
-	bookDetails = &model.Book{
-		Id:     book.Id,
-		Title:  book.Title,
-		Author: book.Author,
-		Year:   book.Year,
-		Stock:  book.Stock,
-		Price:  book.Price,
+	id, err := primitive.ObjectIDFromHex(*idStr)
+	if err != nil {
+		log.Default().Println(err.Error())
+		return nil, errors.New("internal server error: cannot parse string ID to ObjectID")
 	}
 
-	return &model.BookDetailResponse{
-		Data: bookDetails,
+	errFind := col.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&bookDetails)
+
+	if errFind != nil {
+		if errFind == mongo.ErrNoDocuments {
+			log.Default().Println(errFind.Error())
+			return nil, errors.New("document not found")
+		}
+		log.Default().Println(errFind.Error())
+		return nil, errors.New("internal server error: decoding error")
+	}
+
+	return &model.BookDetailed{
+		Title:  bookDetails.Title,
+		Author: bookDetails.Author,
+		Year:   bookDetails.Year,
+		Stock:  bookDetails.Stock,
+		Price:  bookDetails.Price,
 	}, nil
 }
 
 // Change a certain price and stock of a book in the database
-func ChangePrice(req io.Reader) (*model.BookChangeStockPriceResponse, error)
+// func ChangePrice(req io.Reader) (*model.BookChangeStockPriceResponse, error)
 
 // Add a book to the database
-func AddBook(req io.Reader) (*model.BookAddResponse, error) {
+func BookAdd(req io.Reader) (*model.BookAddResponse, error) {
 	var bookReq model.BookAddRequest
 	errReq := json.NewDecoder(req).Decode(&bookReq)
 	if errReq != nil {
@@ -133,4 +145,11 @@ func AddBook(req io.Reader) (*model.BookAddResponse, error) {
 }
 
 // Delete a certain book in the database
-func DeleteBook(req io.Reader) (*model.BookDeleteResponse, error)
+// func DeleteBook(req io.Reader) (*model.BookDeleteResponse, error){
+// 	var bookDelReq model.BookDeleteRequest
+// 	errDec := json.NewDecoder(req).Decode(&bookDelReq)
+
+// 	if errDec != nil{
+// 		return nil,
+// 	}
+// }
