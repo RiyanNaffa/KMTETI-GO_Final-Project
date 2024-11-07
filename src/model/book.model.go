@@ -1,35 +1,33 @@
 package model
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import (
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+// Database type
+type Book struct {
+	Id     primitive.ObjectID   `bson:"_id,emitonempty"`
+	Title  string               `bson:"title"`
+	Author string               `bson:"author"`
+	Year   int                  `bson:"year"`
+	Stock  int                  `bson:"stock"`
+	Price  primitive.Decimal128 `bson:"price"`
+}
 
 // Display type
 type BookDisplay struct {
-	Title  string  `json:"title"`
-	Author string  `json:"author"`
-	Price  float32 `json:"price"`
+	Title  string               `json:"title"`
+	Author string               `json:"author"`
+	Price  primitive.Decimal128 `json:"price"`
 }
 
-// Default type
-type Book struct {
-	Id     primitive.ObjectID `json:"id"`
-	Title  string             `json:"title"`
-	Author string             `json:"author"`
-	Year   int                `json:"year"`
-	Stock  int                `json:"stock"`
-	Price  float32            `json:"price"`
-}
-
-// Display all books
-type BookDisplayResponse struct {
-	DataDisplay []*BookDisplay `json:"datadisplay"`
-}
-
-// Display the details of a book
-type BookDetailRequest struct {
-	Id primitive.ObjectID `json:"id"`
-}
-type BookDetailResponse struct {
-	Data *Book `json:"data"`
+// Detailed type
+type BookDetailed struct {
+	Title  string               `json:"title"`
+	Author string               `json:"author"`
+	Year   int                  `json:"year"`
+	Stock  int                  `json:"stock"`
+	Price  primitive.Decimal128 `json:"price"`
 }
 
 // Change price and stock values
