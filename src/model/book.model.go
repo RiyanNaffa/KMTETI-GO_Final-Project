@@ -42,10 +42,11 @@ type BookChangeStockPriceResponse struct {
 
 // Add a book
 type BookAddRequest struct {
-	Data *Book `json:"data"`
-}
-type BookAddResponse struct {
-	Data *Book `json:"data"`
+	Title  string `json:"title"`
+	Author string `json:"author"`
+	Year   int    `json:"year"`
+	Stock  int    `json:"stock"`
+	Price  string `json:"price"`
 }
 
 // Delete a book
