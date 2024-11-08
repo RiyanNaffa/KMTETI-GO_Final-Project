@@ -42,6 +42,11 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(data)
+
+			return
+
+		default:
+			http.Error(w, "Query Not Accepted.", http.StatusUnprocessableEntity)
 			return
 		}
 
@@ -50,8 +55,26 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case http.MethodPost:
-		// Add a book
-		w.Write([]byte("POST api/book"))
+		if r.URL.Query().Get("action") != "add" {
+			http.Error(w, "Query Not Accepted.", http.StatusUnprocessableEntity)
+			return
+		}
+
+		response, err := service.BookAdd(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		// w.Header().Set("Location", fmt.Sprint("/api/book&add"))
+		w.WriteHeader(http.StatusCreated)
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message": "Book successfully added.",
+			"id":      response.InsertedID,
+		})
+
 		return
 
 	case http.MethodDelete:
