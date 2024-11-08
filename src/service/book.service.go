@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"time"
 
 	"book-store/src/db"
 	"book-store/src/model"
@@ -60,7 +61,7 @@ func BookDisplayAll() ([]*model.BookDisplay, error) {
 }
 
 // Displays a certain book in the database
-func BookDetails(idStr *string) (*model.BookDetailed, error) {
+func BookDetails(idReq *string) (*model.BookDetailed, error) {
 	db, err := db.DBConnection()
 
 	if err != nil {
@@ -72,7 +73,7 @@ func BookDetails(idStr *string) (*model.BookDetailed, error) {
 	col := db.MongoDB.Collection("book")
 
 	var bookDetails *model.Book
-	id, err := primitive.ObjectIDFromHex(*idStr)
+	id, err := primitive.ObjectIDFromHex(*idReq)
 	if err != nil {
 		log.Default().Println(err.Error())
 		return nil, errors.New("internal server error: cannot parse string ID to ObjectID")
@@ -102,46 +103,45 @@ func BookDetails(idStr *string) (*model.BookDetailed, error) {
 // func ChangePrice(req io.Reader) (*model.BookChangeStockPriceResponse, error)
 
 // Add a book to the database
-func BookAdd(req io.Reader) (*model.BookAddResponse, error) {
+func BookAdd(req io.Reader) (*mongo.InsertOneResult, error) {
 	var bookReq model.BookAddRequest
-	errReq := json.NewDecoder(req).Decode(&bookReq)
-	if errReq != nil {
+
+	err := json.NewDecoder(req).Decode(&bookReq)
+	if err != nil {
+		log.Default().Println("Bad Request: Request body cannot be decoded.")
 		return nil, errors.New("bad request")
 	}
+	decimalValue, err := primitive.ParseDecimal128(bookReq.Price)
+	if err != nil {
+		log.Default().Println("Internal Server Error: Parsing error.")
+		return nil, errors.New("parsing error")
+	}
 
-	db, errCon := db.DBConnection()
-	if errCon != nil {
-		log.Default().Println(errCon.Error())
-		return nil, errors.New("internal server error")
+	db, err := db.DBConnection()
+	if err != nil {
+		log.Default().Println("Internal Server Error: Cannot connect to database.")
+		return nil, errors.New("internal server error: cannot connect to database")
 	}
 	defer db.MongoDB.Client().Disconnect(context.TODO())
 
 	col := db.MongoDB.Collection("book")
-	colDisp := db.MongoDB.Collection("bookdisplay")
+	c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	_, errIns := col.InsertOne(context.TODO(), model.Book{
+	response, err := col.InsertOne(c, model.Book{
 		Id:     primitive.NewObjectID(),
-		Title:  bookReq.Data.Title,
-		Author: bookReq.Data.Author,
-		Year:   bookReq.Data.Year,
-		Stock:  bookReq.Data.Stock,
-		Price:  bookReq.Data.Price,
+		Title:  bookReq.Title,
+		Author: bookReq.Author,
+		Year:   bookReq.Year,
+		Stock:  bookReq.Stock,
+		Price:  decimalValue,
 	})
-	_, errInsDisp := colDisp.InsertOne(context.TODO(), model.BookDisplay{
-		Title:  bookReq.Data.Title,
-		Author: bookReq.Data.Author,
-		Price:  bookReq.Data.Price,
-	})
-	if errIns != nil {
-		log.Default().Println(errIns.Error())
-		return nil, errors.New("internal server error")
-	}
-	if errInsDisp != nil {
-		log.Default().Println(errInsDisp.Error())
+	if err != nil {
+		log.Default().Println("Internal Server Error: Cannot add item to database.")
 		return nil, errors.New("internal server error")
 	}
 
-	return nil, nil
+	return response, nil
 }
 
 // Delete a certain book in the database
