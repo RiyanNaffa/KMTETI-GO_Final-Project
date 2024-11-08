@@ -32,12 +32,12 @@ type BookDetailed struct {
 
 // Change price and stock values
 type BookChangeStockPriceRequest struct {
-	Id    primitive.ObjectID `json:"id"`
-	Stock int                `json:"stock"`
-	Price float32            `json:"price"`
+	Id    primitive.ObjectID   `json:"_id"`
+	Stock int                  `json:"stock"`
+	Price primitive.Decimal128 `json:"price"`
 }
 type BookChangeStockPriceResponse struct {
-	Data *Book `json:"data"`
+	Data *BookDetailed `json:"data"`
 }
 
 // Add a book
