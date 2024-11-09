@@ -22,8 +22,8 @@ func BookDisplayAll() ([]*model.BookDisplay, error) {
 	db, err := db.DBConnection()
 
 	if err != nil {
-		log.Default().Println(err.Error())
-		return nil, errors.New("internal server error: cannot connect to database")
+		log.Default().Println("Internal Server Error: Cannot connect to database.")
+		return nil, errors.New("internal server error")
 	}
 	defer db.MongoDB.Client().Disconnect(context.TODO())
 
@@ -37,8 +37,8 @@ func BookDisplayAll() ([]*model.BookDisplay, error) {
 	cur, err := col.Find(context.TODO(), bson.D{}, options.Find().SetProjection(projection))
 
 	if err != nil {
-		log.Default().Println(err.Error())
-		return nil, errors.New("internal server error: cursor error")
+		log.Default().Println("Internal Server Error: Cursor error.")
+		return nil, errors.New("internal server error")
 	}
 	defer cur.Close(context.TODO())
 
@@ -47,8 +47,8 @@ func BookDisplayAll() ([]*model.BookDisplay, error) {
 	for cur.Next(context.TODO()) {
 		var book model.Book
 		if err := cur.Decode(&book); err != nil {
-			log.Default().Println(err.Error())
-			return nil, errors.New("internal server error: decoding error")
+			log.Default().Println("Internal Server Error: Decoding error.")
+			return nil, errors.New("internal server error")
 		}
 		bookList = append(bookList, &model.BookDisplay{
 			Title:  book.Title,
@@ -65,29 +65,30 @@ func BookDetails(idReq *string) (*model.BookDetailed, error) {
 	db, err := db.DBConnection()
 
 	if err != nil {
-		log.Default().Println(err.Error())
-		return nil, errors.New("internal server error: cannot connect to database")
+		log.Default().Println("Internal Server Error: Cannot connect to database.")
+		return nil, errors.New("internal server error")
 	}
 	defer db.MongoDB.Client().Disconnect(context.TODO())
 
 	col := db.MongoDB.Collection("book")
 
 	var bookDetails *model.Book
+
 	id, err := primitive.ObjectIDFromHex(*idReq)
 	if err != nil {
-		log.Default().Println(err.Error())
-		return nil, errors.New("internal server error: cannot parse string ID to ObjectID")
+		log.Default().Println("Internal Server Error: Parsing error.")
+		return nil, errors.New("internal server error")
 	}
 
 	errFind := col.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&bookDetails)
 
 	if errFind != nil {
 		if errFind == mongo.ErrNoDocuments {
-			log.Default().Println(errFind.Error())
-			return nil, errors.New("document not found")
+			log.Default().Println("Not Found: Document not found.")
+			return nil, errors.New("not found")
 		}
-		log.Default().Println(errFind.Error())
-		return nil, errors.New("internal server error: decoding error")
+		log.Default().Println("Internal Server Error: Decoding error.")
+		return nil, errors.New("internal server error")
 	}
 
 	return &model.BookDetailed{
@@ -155,6 +156,7 @@ func BookAdd(req io.Reader) (*mongo.InsertOneResult, error) {
 		log.Default().Println("Bad Request: Request body cannot be decoded.")
 		return nil, errors.New("bad request")
 	}
+
 	price, err := primitive.ParseDecimal128(bookReq.Price)
 	if err != nil {
 		log.Default().Println("Unprocessable Entity: Parsing error.")
