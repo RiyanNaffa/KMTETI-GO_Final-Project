@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"book-store/api"
-
-	"github.com/savioxavier/termlink"
+	"book-store/src/api"
 )
 
 func main() {
@@ -19,7 +17,7 @@ func main() {
 
 	// Test on root
 	h.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Testing..."))
+		w.Write([]byte("Welcome to my page!"))
 	})
 
 	// Handle book
@@ -28,7 +26,6 @@ func main() {
 	h.HandleFunc("/api/employee", api.EmployeeHandler)
 
 	fmt.Println("Running on Port 8080")
-	fmt.Println(termlink.Link("http://localhost:8080/", "http://localhost:8080/"))
 
 	err := s.ListenAndServe()
 	if err != nil {
