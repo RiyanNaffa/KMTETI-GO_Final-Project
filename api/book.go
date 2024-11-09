@@ -14,7 +14,7 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 
 		switch action {
 
-		case "displayAll":
+		case "display":
 			data, err := service.BookDisplayAll()
 
 			if err != nil {
@@ -23,6 +23,7 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(&data)
 			return
 
@@ -33,15 +34,26 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "No ID parsed.", http.StatusBadRequest)
 				return
 			}
+
 			data, err := service.BookDetails(&id)
 
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+				switch err.Error() {
+				case "internal server error":
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				case "not found":
+					http.Error(w, err.Error(), http.StatusNotFound)
+					return
+				default:
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(&data)
 
 			return
 
@@ -51,31 +63,85 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case http.MethodPut:
-		// Change price & stock
-		return
+		action := r.URL.Query().Get("action")
 
-	case http.MethodPost:
-		if r.URL.Query().Get("action") != "add" {
+		switch action {
+		case "update":
+			response, err := service.BookUpdate(r.Body)
+			if err != nil {
+				switch err.Error() {
+				case "bad request":
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				case "unprocessable entity":
+					http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+					return
+				case "internal server error":
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				default:
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
+
+			message := "Book successfully updated."
+
+			if response.MatchedCount == 0 {
+				message = "Book not found."
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"message":  message,
+				"modified": response.ModifiedCount,
+			})
+
+		default:
 			http.Error(w, "Query Not Accepted.", http.StatusUnprocessableEntity)
 			return
 		}
+		return
 
-		response, err := service.BookAdd(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+	case http.MethodPost:
+		action := r.URL.Query().Get("action")
+
+		switch action {
+
+		case "add":
+			response, err := service.BookAdd(r.Body)
+			if err != nil {
+				switch err.Error() {
+				case "internal server error":
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				case "bad request":
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				case "unprocessable entity":
+					http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+					return
+				default:
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"message": "Book successfully added.",
+				"id":      response.InsertedID,
+			})
+
+			return
+
+		default:
+			http.Error(w, "query not accepted", http.StatusUnprocessableEntity)
 			return
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		// w.Header().Set("Location", fmt.Sprint("/api/book&add"))
-		w.WriteHeader(http.StatusCreated)
-
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message": "Book successfully added.",
-			"id":      response.InsertedID,
-		})
-
-		return
 
 	case http.MethodDelete:
 		// Delete a book from database
