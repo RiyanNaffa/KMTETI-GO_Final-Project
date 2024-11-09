@@ -2,28 +2,42 @@ package model
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
+type Date struct {
+	Day   int `json:"day" bson:"day"`
+	Month int `json:"month" bson:"month"`
+	Year  int `json:"year" bson:"year"`
+}
+
+// Type used for decoding a database document.
 type Employee struct {
-	Id             primitive.ObjectID `json:"id"`
-	Name           string             `json:"name"`
-	NIK            string             `json:"nik"`
-	Edu            string             `json:"edu"`
-	EmploymentDate string             `json:"date"`
-	EmploymentType string             `json:"type"`
+	Id         primitive.ObjectID `bson:"_id"`
+	Name       string             `bson:"name"`
+	NIK        string             `bson:"nik"`
+	Edu        string             `bson:"edu"`
+	EmplDate   Date               `bson:"date"`
+	EmplStatus string             `bson:"type"`
 }
 
+// Type used for displaying general information regarding an employee document.
 type EmployeeDisplay struct {
-	Name           string `json:"name"`
-	EmploymentDate string `json:"date"`
-	EmploymentType string `json:"type"`
+	Name       string `json:"name"`
+	EmplDate   Date   `json:"date"`
+	EmplStatus string `json:"type"`
 }
 
-type EmployeeDisplayResponse struct {
-	DataDisplay []*EmployeeDisplay `json:"datadisplay"`
-}
-
+// Type used for decoding a create request of an employee document.
 type EmployeeAddRequest struct {
-	Data *Employee `json:"data"`
+	Name       string `json:"name"`
+	NIK        string `json:"nik"`
+	Edu        string `json:"edu"`
+	Day        int    `json:"day"`
+	Month      int    `json:"month"`
+	Year       int    `json:"year"`
+	EmplStatus string `json:"type"`
 }
-type EmployeeAddResponse struct {
-	Data *Employee `json:"data"`
+
+// Type used for a response to delete an employee document procedure.
+type EmployeeDeleteResponse struct {
+	Id   string `json:"_id"`
+	Name string `json:"name"`
 }
