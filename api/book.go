@@ -6,6 +6,12 @@ import (
 	"net/http"
 )
 
+// A function for handling various requests regarding the book collection.
+//
+// Available HTTP methods are GET, POST, PUT and DELETE. BookHandler is capable of displaying all books'
+// information in the database, displaying a detailed information of a book from the database, updating
+// a book's price and stock data, inserting a book data into the database, and delete a book from the
+// database.
 func BookHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
@@ -58,7 +64,7 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 			return
 
 		default:
-			http.Error(w, "Query Not Accepted.", http.StatusUnprocessableEntity)
+			http.Error(w, "query not accepted.", http.StatusUnprocessableEntity)
 			return
 		}
 
@@ -66,6 +72,7 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 		action := r.URL.Query().Get("action")
 
 		switch action {
+
 		case "update":
 			response, err := service.BookUpdate(r.Body)
 			if err != nil {
@@ -86,7 +93,6 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			message := "Book successfully updated."
-
 			if response.MatchedCount == 0 {
 				message = "Book not found."
 			}
@@ -99,10 +105,9 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 			})
 
 		default:
-			http.Error(w, "Query Not Accepted.", http.StatusUnprocessableEntity)
+			http.Error(w, "query not accepted.", http.StatusUnprocessableEntity)
 			return
 		}
-		return
 
 	case http.MethodPost:
 		action := r.URL.Query().Get("action")
@@ -157,7 +162,6 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			response, err := service.BookDelete(&id)
-
 			if err != nil {
 				switch err.Error() {
 				case "internal server error":
@@ -180,6 +184,7 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 			})
 
 			return
+
 		default:
 			http.Error(w, "query not accepted", http.StatusUnprocessableEntity)
 			return
