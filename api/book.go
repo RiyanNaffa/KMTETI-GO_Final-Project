@@ -133,7 +133,7 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"message": "Book successfully added.",
-				"id":      response.InsertedID,
+				"_id":     response.InsertedID,
 			})
 
 			return
@@ -144,12 +144,49 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case http.MethodDelete:
-		// Delete a book from database
-		return
+		action := r.URL.Query().Get("action")
+
+		switch action {
+
+		case "delete":
+			id := r.URL.Query().Get("id")
+
+			if id == "" {
+				http.Error(w, "No ID parsed.", http.StatusBadRequest)
+				return
+			}
+
+			response, err := service.BookDelete(&id)
+
+			if err != nil {
+				switch err.Error() {
+				case "internal server error":
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				case "not found":
+					http.Error(w, err.Error(), http.StatusNotFound)
+					return
+				default:
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"message": "Book deleted successfully.",
+				"book":    &response,
+			})
+
+			return
+		default:
+			http.Error(w, "query not accepted", http.StatusUnprocessableEntity)
+			return
+		}
 
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte("405: Method Not Allowed"))
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
