@@ -14,14 +14,17 @@ type Book struct {
 	Price  primitive.Decimal128 `bson:"price"`
 }
 
-// Display type
+// BookDisplayAll()
+//
+// Data type for "display" response
 type BookDisplay struct {
 	Title  string               `json:"title"`
 	Author string               `json:"author"`
 	Price  primitive.Decimal128 `json:"price"`
 }
 
-// Detailed type
+// BookDetails()
+// Data type for "details" response
 type BookDetailed struct {
 	Title  string               `json:"title"`
 	Author string               `json:"author"`
@@ -30,17 +33,16 @@ type BookDetailed struct {
 	Price  primitive.Decimal128 `json:"price"`
 }
 
-// Change price and stock values
-type BookChangeStockPriceRequest struct {
-	Id    primitive.ObjectID   `json:"_id"`
-	Stock int                  `json:"stock"`
-	Price primitive.Decimal128 `json:"price"`
-}
-type BookChangeStockPriceResponse struct {
-	Data *BookDetailed `json:"data"`
+// BookUpdate()
+// Data type for "change" request
+type BookUpdateRequest struct {
+	Id    string `json:"_id"`
+	Stock int    `json:"stock"`
+	Price string `json:"price"`
 }
 
-// Add a book
+// BookAdd()
+// Data type for "add" request
 type BookAddRequest struct {
 	Title  string `json:"title"`
 	Author string `json:"author"`
@@ -49,10 +51,9 @@ type BookAddRequest struct {
 	Price  string `json:"price"`
 }
 
-// Delete a book
-type BookDeleteRequest struct {
-	Id primitive.ObjectID `json:"id"`
-}
+// BookDelete()
+// Data type for "delete" response
 type BookDeleteResponse struct {
-	Data *Book `json:"data"`
+	Id    string `json:"_id"`
+	Title string `json:"title"`
 }
