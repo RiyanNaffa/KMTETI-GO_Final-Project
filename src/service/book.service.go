@@ -14,7 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Displays all books in the database
@@ -28,13 +27,7 @@ func BookDisplayAll() ([]*model.BookDisplay, error) {
 	defer db.MongoDB.Client().Disconnect(context.TODO())
 
 	col := db.MongoDB.Collection("book")
-	projection := bson.D{
-		{Key: "_id", Value: 0},
-		{Key: "title", Value: 1},
-		{Key: "author", Value: 1},
-		{Key: "price", Value: 1},
-	}
-	cur, err := col.Find(context.TODO(), bson.D{}, options.Find().SetProjection(projection))
+	cur, err := col.Find(context.TODO(), bson.D{})
 
 	if err != nil {
 		log.Default().Println("Internal Server Error: Cursor error.")
@@ -83,7 +76,7 @@ func BookDetails(idReq *string) (*model.BookDetailed, error) {
 	errFind := col.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&bookDetails)
 
 	if errFind != nil {
-		if errFind == mongo.ErrNoDocuments {
+		if errors.Is(errFind, mongo.ErrNoDocuments) {
 			log.Default().Println("Not Found: Document not found.")
 			return nil, errors.New("not found")
 		}
@@ -192,11 +185,41 @@ func BookAdd(req io.Reader) (*mongo.InsertOneResult, error) {
 }
 
 // Delete a certain book in the database
-// func DeleteBook(req io.Reader) (*model.BookDeleteResponse, error){
-// 	var bookDelReq model.BookDeleteRequest
-// 	errDec := json.NewDecoder(req).Decode(&bookDelReq)
+func BookDelete(idReq *string) (*model.BookDeleteResponse, error) {
+	db, err := db.DBConnection()
+	if err != nil {
+		log.Default().Println("Internal Server Error: Cannot connect to database.")
+		return nil, errors.New("internal server error")
+	}
+	defer db.MongoDB.Client().Disconnect(context.TODO())
 
-// 	if errDec != nil{
-// 		return nil,
-// 	}
-// }
+	id, err := primitive.ObjectIDFromHex(*idReq)
+	if err != nil {
+		log.Default().Println("Internal Server Error: Parsing Error.")
+		return nil, errors.New("internal server error")
+	}
+
+	var book model.Book
+
+	col := db.MongoDB.Collection("book")
+
+	c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"_id": id}
+
+	errDel := col.FindOneAndDelete(c, filter).Decode(&book)
+	if errDel != nil {
+		if errors.Is(errDel, mongo.ErrNoDocuments) {
+			log.Default().Println("Not Found: Document not found.")
+			return nil, errors.New("not found")
+		}
+		log.Default().Println("Internal Server Error: Cannot delete the document.")
+		return nil, errors.New("internal server error")
+	}
+
+	return &model.BookDeleteResponse{
+		Id:    *idReq,
+		Title: book.Title,
+	}, nil
+}
