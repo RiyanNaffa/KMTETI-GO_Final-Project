@@ -100,7 +100,51 @@ func BookDetails(idReq *string) (*model.BookDetailed, error) {
 }
 
 // Change a certain price and stock of a book in the database
-// func ChangePrice(req io.Reader) (*model.BookChangeStockPriceResponse, error)
+func BookUpdate(req io.Reader) (*mongo.UpdateResult, error) {
+	var changeReq model.BookUpdateRequest
+
+	err := json.NewDecoder(req).Decode(&changeReq)
+	if err != nil {
+		log.Default().Println("Bad Request: Request body cannot be decoded.")
+		return nil, errors.New("bad request")
+	}
+	id, err := primitive.ObjectIDFromHex(changeReq.Id)
+	if err != nil {
+		log.Default().Println("Unprocessable Entity: Parsing error.")
+		return nil, errors.New("unprocessable entity")
+	}
+	price, err := primitive.ParseDecimal128(changeReq.Price)
+	if err != nil {
+		log.Default().Println("Unprocessable Entity: Parsing error.")
+		return nil, errors.New("unprocessable entity")
+	}
+
+	db, err := db.DBConnection()
+	if err != nil {
+		log.Default().Println("Internal Server Error: Cannot connect to database.")
+		return nil, errors.New("internal server error")
+	}
+	defer db.MongoDB.Client().Disconnect(context.TODO())
+
+	update := bson.M{
+		"$set": bson.M{
+			"price": price,
+			"stock": changeReq.Stock,
+		},
+	}
+
+	col := db.MongoDB.Collection("book")
+
+	c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	response, err := col.UpdateOne(c, bson.M{"_id": id}, update)
+	if err != nil {
+		log.Default().Println("Internal Server Error: Cannot update item in database.")
+		return nil, errors.New("internal server error")
+	}
+	return response, nil
+}
 
 // Add a book to the database
 func BookAdd(req io.Reader) (*mongo.InsertOneResult, error) {
@@ -111,20 +155,21 @@ func BookAdd(req io.Reader) (*mongo.InsertOneResult, error) {
 		log.Default().Println("Bad Request: Request body cannot be decoded.")
 		return nil, errors.New("bad request")
 	}
-	decimalValue, err := primitive.ParseDecimal128(bookReq.Price)
+	price, err := primitive.ParseDecimal128(bookReq.Price)
 	if err != nil {
-		log.Default().Println("Internal Server Error: Parsing error.")
-		return nil, errors.New("parsing error")
+		log.Default().Println("Unprocessable Entity: Parsing error.")
+		return nil, errors.New("unprocessable entity")
 	}
 
 	db, err := db.DBConnection()
 	if err != nil {
 		log.Default().Println("Internal Server Error: Cannot connect to database.")
-		return nil, errors.New("internal server error: cannot connect to database")
+		return nil, errors.New("internal server error")
 	}
 	defer db.MongoDB.Client().Disconnect(context.TODO())
 
 	col := db.MongoDB.Collection("book")
+
 	c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -134,7 +179,7 @@ func BookAdd(req io.Reader) (*mongo.InsertOneResult, error) {
 		Author: bookReq.Author,
 		Year:   bookReq.Year,
 		Stock:  bookReq.Stock,
-		Price:  decimalValue,
+		Price:  price,
 	})
 	if err != nil {
 		log.Default().Println("Internal Server Error: Cannot add item to database.")
